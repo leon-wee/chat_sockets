@@ -2,7 +2,7 @@ var express = require('express')
 var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
-var names = [];
+var users = {};
 
 app.use(express.static('public'));
 
@@ -11,14 +11,23 @@ app.get('/', function(req, res) {
 });
 
 io.on('connection', function(socket) {
-  socket.broadcast.emit('chat message', 'A user has connected');
 
   socket.on('name', function(name) {
-    names.push(name);
+    users[socket.id] = name
+    socket.broadcast.emit('chat message', users[socket.id] + ' has connected');
+    io.to(socket.id).emit('chat message', 'Welcome ' + users[socket.id])
   });
 
   socket.on('chat message', function(msg) {
-    io.emit('chat message', names[0] + ': ' + msg);
+    io.emit('chat message', users[socket.id] + ': ' + msg);
+  });
+
+  socket.on('typing', function(name) {
+    socket.broadcast.emit('typing', name + ' is typing ... ')
+  });
+
+  socket.on('not typing', function(string) {
+    socket.broadcast.emit('not typing', string)
   });
 });
 
